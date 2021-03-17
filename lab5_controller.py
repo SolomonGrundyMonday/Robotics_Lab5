@@ -115,7 +115,8 @@ if mode == 'planner':
 
 
 
-# Part 2.2: Compute an approximation of the “configuration space”
+
+
 
 
 
@@ -130,7 +131,7 @@ if mode == 'planner':
 
 # Initialize your map data structure here as a 2D floating point array
 if mode == 'manual':
-    map = None # Replace None by a numpy 2D floating point array
+    map = np.zeros((360,360)) # Replace None by a numpy 2D floating point array
 
 
 if mode == 'autonomous':
@@ -209,7 +210,7 @@ while robot.step(timestep) != -1 and mode != 'planner':
             vR = 0
         elif key == ord('S'):
 # Part 1.4: Save map to disc
-
+            np.save('/Applications/Robotics/Lab/CSCI3302_Lab5/controllers/map', map)
             print("Map file saved")
         elif key == ord('L'):
             # You will not use this portion but here's an example for loading saved a numpy array
