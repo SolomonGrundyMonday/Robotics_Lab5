@@ -72,7 +72,7 @@ vR = 0
 
 ##################### IMPORTANT #####################
 # Set the mode here. Please change to 'autonomous' before submission
-mode = 'manual' # Part 1.1: manual mode
+mode = 'planner' # Part 1.1: manual mode
 # mode = 'planner'
 # mode = 'autonomous'
 
@@ -93,6 +93,10 @@ compass.enable(timestep)
 ###################
 if mode == 'planner':
 # Part 2.3: Provide start and end in world coordinate frame and convert it to map's frame
+    map = np.load('/Users/Owner/Documents/Robotics/CSCI3302_Lab5/controllers/map.npy')
+    plt.imshow(map, cmap='gray')
+    plt.show()
+    
     start_w = None # (Pose_X, Pose_Z) in meters
     end_w = None # (Pose_X, Pose_Z) in meters
 
@@ -112,7 +116,6 @@ if mode == 'planner':
 
 
 # Part 2.1: Load map (map.npy) from disk and visualize it
-
 
 
 
@@ -184,8 +187,6 @@ while robot.step(timestep) != -1 and mode != 'planner':
                     map[pixel_x][pixel_y] = 1.0
                 g = int(map[pixel_x][pixel_y]*255)
                 g = int((g*256**2+g*256+g))
-                if(g>255):
-                    g = 255
                 display.setColor(g)
                 display.drawPixel(360-int(wy*30),int(wx*30))
 
@@ -219,7 +220,7 @@ while robot.step(timestep) != -1 and mode != 'planner':
             vR = 0
         elif key == ord('S'):
 # Part 1.4: Save map to disc
-            np.save('/Users/Owner/Documents/Robotics/CSCI3302_Lab5/controllers/lab5_controller', map)
+            np.save('/Users/Owner/Documents/Robotics/CSCI3302_Lab5/controllers/map', map)
             print("Map file saved")
         elif key == ord('L'):
             # You will not use this portion but here's an example for loading saved a numpy array
