@@ -72,9 +72,9 @@ vR = 0
 
 ##################### IMPORTANT #####################
 # Set the mode here. Please change to 'autonomous' before submission
-mode = 'planner' # Part 1.1: manual mode
-# mode = 'planner'
-# mode = 'autonomous'
+#mode = 'manual' # Part 1.1: manual mode
+mode = 'planner'
+#mode = 'autonomous'
 
 lidar_sensor_readings = []
 lidar_offsets = np.linspace(-LIDAR_ANGLE_RANGE/2., +LIDAR_ANGLE_RANGE/2., LIDAR_ANGLE_BINS)
@@ -94,15 +94,28 @@ compass.enable(timestep)
 if mode == 'planner':
 # Part 2.3: Provide start and end in world coordinate frame and convert it to map's frame
     map = np.load('/Users/Owner/Documents/Robotics/CSCI3302_Lab5/controllers/map.npy')
-    plt.imshow(map, cmap='gray')
+    #plt.imshow(map, cmap='gray')
+    #plt.show()
+    kernel = np.ones((13,13))
+    intermediate_config = convolve2d(map, kernel, mode='same')
+
+    proper_map = np.zeros((360,360))
+
+    for i in range(0,360):
+        for j in range(0,360):
+            if(intermediate_config[i][j] >= 28):
+                proper_map[i][j] = 1
+            
+    np.save('/Users/Owner/Documents/Robotics/CSCI3302_Lab5/controllers/proper_map.npy', proper_map)
+    plt.imshow(proper_map, cmap='gray')
     plt.show()
-    
-    start_w = None # (Pose_X, Pose_Z) in meters
-    end_w = None # (Pose_X, Pose_Z) in meters
+
+    start_w = (pose_x, pose_y) # (Pose_X, Pose_Z) in meters
+    end_w = (10.0, 7.0) # (Pose_X, Pose_Z) in meters
 
     # Convert the start_w and end_W from webot's coordinate frame to map's
-    start = None # (x, y) in 360x360 map
-    ens = None # (x, y) in 360x360 map
+    start = (int(12 * start_w[0]), int(360 - (12 * start_w[1]))) # (x, y) in 360x360 map
+    end = (int(12 * end_w[0]), int(360 - (12 * end_w[1]))) # (x, y) in 360x360 map
 
 # Part 2.3: Implement A* or Dijkstra's
     def path_planner(map, start, end):
@@ -112,7 +125,79 @@ if mode == 'planner':
         :param end: A tuple of indices representing the end cell in the map
         :return: A list of tuples as a path from the given start to the given end in the given maze
         '''
-        pass
+        
+        
+        def reconstruct_path(cameFrom, current):
+            path = []
+            
+            for item in cameFrom.keys():
+                current_node = cameFrom[item]
+                path.append(current_node)
+                
+            return path
+            
+        def heuristic_cost(neighbor, end):
+            if(map[end[0]][end[1]] != 1):
+                return np.linalg.norm([neighbor, end])
+            else:
+                return float('inf')
+        
+        closed = []
+        open = []
+        gscore = {}
+        for i in range(0,360):
+            for j in range(0,360):
+                gscore[(i,j)] = float('inf')
+        
+        cameFrom = np.zeros((360, 360))
+        gscore[start] = 0
+        fscore = {}
+        
+        for i in range(0, 360):
+            for j in range(0, 360):
+                gscore[(i,j)] = float('inf')
+        
+        fscore[start] = heuristic_cost(start, end)
+        
+        open.append(start)
+        while len(open) != 0:
+            current = min(fscore, key=fscore.get)
+            if current == end:
+                return reconstruct_path(cameFrom, current)
+                
+              
+            open.remove(current)
+            closed.append(current)
+            
+            neighbors = []
+            for i in range(current[0]-1, current[0]+2):
+                for j in range(current[1]-1, current[1]+2):
+                    if (i >= 0 and i < 360 and j >= 0 and j < 360):
+                        neighbors.append((i,j))
+                        
+            print(neighbors)
+            
+            for neighbor in neighbors:
+                if neighbor in closed:
+                    continue
+                    
+                if neighbor not in open:
+                    open.append(current)
+                    
+                tentative_gscore = gscore[current] + np.linalg.norm([neighbor, current])
+                if tentative_gscore >= gscore[neighbor]:
+                    continue
+                    
+                cameFrom[neighbor] = current
+                gscore[neighbor] = tentative_gscore
+                if(heuristic_cost(neighbor, end) == float('inf')):
+                    fscore[neighbor] = float('inf')
+                else:
+                    fscore[neighbor] = gscore[neighbor] + heuristic_cost(neighbor, end)
+                
+        return [(1000,1000)]
+        
+        
 
 
 # Part 2.1: Load map (map.npy) from disk and visualize it
@@ -120,15 +205,18 @@ if mode == 'planner':
 
 
 
-
-
-
 # Part 2.3 continuation: Call path_planner
+
+    path = path_planner(proper_map, start, end)
 
 
 # Part 2.4: Turn paths into goal points and save on disk as path.npy and visualize it
 
-
+    for point in path:
+        point = (point[0], (360 - point[1]))
+    
+    
+    np.save('/Users/Owner/Documents/Robotics/CSCI3302_Lab5/controllers/path.npy', path)
 
 # Part 1.2: Map Initialization
 
@@ -139,7 +227,17 @@ if mode == 'manual':
 
 if mode == 'autonomous':
 # Part 3.1: Load path from disk and visualize it (Make sure its properly indented)
-    pass
+    path = np.load('/Users/Owner/Documents/Robotics/CSCI3302_Lab5/controllers/path.npy')
+    map = np.load('/Users/Owner/Documents/Robotics/CSCI3302_Lab5/controllers/map.npy')
+    proper_map = np.load('/Users/Owner/Documents/Robotics/CSCI3302_Lab5/controllers/proper_map.npy')
+    
+    print(path)
+    plt.imshow(proper_map, cmap='gray')
+    for i in range(len(path) - 1):
+        plt.scatter(path[i], path[i+1], color='r')          
+     
+    plt.show()          
+       
 
 state = 0 # use this to iterate through your path
 
