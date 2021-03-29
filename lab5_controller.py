@@ -93,7 +93,7 @@ compass.enable(timestep)
 ###################
 if mode == 'planner':
 # Part 2.3: Provide start and end in world coordinate frame and convert it to map's frame
-    map = np.load('/Users/Owner/Documents/Robotics/CSCI3302_Lab5/controllers/map.npy')
+    map = np.load('/Applications/Robotics/Lab/CSCI3302_Lab5/controllers/map.npy')
     #plt.imshow(map, cmap='gray')
     #plt.show()
     kernel = np.ones((13,13))
@@ -106,7 +106,7 @@ if mode == 'planner':
             if(intermediate_config[i][j] >= 28):
                 proper_map[i][j] = 1
             
-    np.save('/Users/Owner/Documents/Robotics/CSCI3302_Lab5/controllers/proper_map.npy', proper_map)
+    # np.save('/Applications/Robotics/Lab/CSCI3302_Lab5/controllers/proper_map.npy', proper_map)
     plt.imshow(proper_map, cmap='gray')
     plt.show()
 
@@ -127,75 +127,105 @@ if mode == 'planner':
         '''
         
         
-        def reconstruct_path(cameFrom, current):
+
+        def reconstruct_path(cameFrom, ending, start):
+            # print ("calling function")
             path = []
-            
-            for item in cameFrom.keys():
-                current_node = cameFrom[item]
-                path.append(current_node)
-                
+            value = ending
+            while value != start:
+                # if value == cameFrom[value]:
+                    # del cameFrom[value]
+                # else:
+                value = cameFrom[value]
+                path.append(value)        
             return path
             
         def heuristic_cost(neighbor, end):
-            if(map[end[0]][end[1]] != 1):
-                return np.linalg.norm([neighbor, end])
-            else:
-                return float('inf')
+            return np.linalg.norm([neighbor, end])
+            
         
-        closed = []
-        open = []
+        closed = []#nodes we've already looked at (explored)
+        open = []# frontier
         gscore = {}
         for i in range(0,360):
             for j in range(0,360):
                 gscore[(i,j)] = float('inf')
         
-        cameFrom = np.zeros((360, 360))
-        gscore[start] = 0
-        fscore = {}
+        cameFrom = {start: None}
+        
+        hscore = {}
         
         for i in range(0, 360):
             for j in range(0, 360):
-                gscore[(i,j)] = float('inf')
+                hscore[(i,j)] = float('inf')
         
+        fscore = {}
+        for i in range(0, 360):
+            for j in range(0, 360):
+                fscore[(i,j)] = hscore[(i,j)] + gscore[(i,j)]
+ 
+        gscore[start] = 0#g
+        hscore[start] = heuristic_cost(start, end)
         fscore[start] = heuristic_cost(start, end)
         
         open.append(start)
-        while len(open) != 0:
-            current = min(fscore, key=fscore.get)
+        #start = (30,253)
+        current = start#open.pop(0)
+        count = 0
+        
+        while (len(open) != 0):
+            #current = min(fscore)#min(fscore, key=fscore.get)
+            min = float('inf')
+            for key in open:
+                if fscore[key] != float('inf') and fscore[key] < min:
+                    current = key
+                    min = fscore[key]
+                    
+                    
+            # print ("new current node is: ", current)
             if current == end:
-                return reconstruct_path(cameFrom, current)
+                print ("just in case")
+                print ("path is: ", reconstruct_path(cameFrom, current, start))
+                return reconstruct_path(cameFrom, current, start)
                 
-              
+           
             open.remove(current)
             closed.append(current)
             
             neighbors = []
             for i in range(current[0]-1, current[0]+2):
                 for j in range(current[1]-1, current[1]+2):
-                    if (i >= 0 and i < 360 and j >= 0 and j < 360):
+                    if (i >= 0 and i < 360 and j >= 0 and j < 360 and (i,j) != current):
                         neighbors.append((i,j))
                         
-            print(neighbors)
+            # print("neighbors we are looking at is: ", neighbors)
             
             for neighbor in neighbors:
-                if neighbor in closed:
+            #(29, 252), (29, 253), (29, 254), (30, 252), (30, 254), (31, 252), (31, 253), (31, 254)]
+                if neighbor in closed or map[neighbor[0]][neighbor[1]] == 1:
                     continue
                     
                 if neighbor not in open:
-                    open.append(current)
-                    
+                    open.append(neighbor)
+                   
+                # print ("current neighbor is: ", neighbor)
                 tentative_gscore = gscore[current] + np.linalg.norm([neighbor, current])
-                if tentative_gscore >= gscore[neighbor]:
+                if (tentative_gscore >= gscore[neighbor]):#this is not a better path
+                    # print ("entering here")
                     continue
-                    
-                cameFrom[neighbor] = current
-                gscore[neighbor] = tentative_gscore
-                if(heuristic_cost(neighbor, end) == float('inf')):
-                    fscore[neighbor] = float('inf')
                 else:
+                    gscore[neighbor] = tentative_gscore
+                    cameFrom[neighbor] = current
                     fscore[neighbor] = gscore[neighbor] + heuristic_cost(neighbor, end)
+
                 
-        return [(1000,1000)]
+                # print ("finish with ", neighbor)
+            # print ("open is ", open)
+        # print ("end")
+        # print ("came from is: ",cameFrom)
+        # print ("path is: ", reconstruct_path(cameFrom, current, start))
+        return reconstruct_path(cameFrom, current, start)
+        #return [(1000,1000)]
         
         
 
@@ -208,6 +238,12 @@ if mode == 'planner':
 # Part 2.3 continuation: Call path_planner
 
     path = path_planner(proper_map, start, end)
+    print ("path is", path)
+    plt.imshow(proper_map, cmap='gray')#obstable
+    for i in range(len(path) - 1):
+        plt.scatter(path[i], path[i+1], color='r')          
+     
+    plt.show() 
 
 
 # Part 2.4: Turn paths into goal points and save on disk as path.npy and visualize it
@@ -216,7 +252,7 @@ if mode == 'planner':
         point = (point[0], (360 - point[1]))
     
     
-    np.save('/Users/Owner/Documents/Robotics/CSCI3302_Lab5/controllers/path.npy', path)
+    np.save('/Applications/Robotics/Lab/CSCI3302_Lab5/controllers/path.npy', path)
 
 # Part 1.2: Map Initialization
 
@@ -227,9 +263,9 @@ if mode == 'manual':
 
 if mode == 'autonomous':
 # Part 3.1: Load path from disk and visualize it (Make sure its properly indented)
-    path = np.load('/Users/Owner/Documents/Robotics/CSCI3302_Lab5/controllers/path.npy')
-    map = np.load('/Users/Owner/Documents/Robotics/CSCI3302_Lab5/controllers/map.npy')
-    proper_map = np.load('/Users/Owner/Documents/Robotics/CSCI3302_Lab5/controllers/proper_map.npy')
+    path = np.load('/Applications/Robotics/Lab/CSCI3302_Lab5/controllers/path.npy')
+    map = np.load('/Applications/Robotics/Lab/CSCI3302_Lab5/controllers/map.npy')
+    proper_map = np.load('/Applications/Robotics/Lab/CSCI3302_Lab5/controllers/proper_map.npy')
     
     print(path)
     plt.imshow(proper_map, cmap='gray')
