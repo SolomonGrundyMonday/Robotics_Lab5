@@ -74,7 +74,7 @@ vR = 0
 # Set the mode here. Please change to 'autonomous' before submission
 #mode = 'manual' # Part 1.1: manual mode
 mode = 'planner'
-#mode = 'autonomous'
+# mode = 'autonomous'
 
 lidar_sensor_readings = []
 lidar_offsets = np.linspace(-LIDAR_ANGLE_RANGE/2., +LIDAR_ANGLE_RANGE/2., LIDAR_ANGLE_BINS)
@@ -111,12 +111,13 @@ if mode == 'planner':
     plt.show()
 
     start_w = (pose_x, pose_y) # (Pose_X, Pose_Z) in meters
-    end_w = (7.0, 6.0) # (Pose_X, Pose_Z) in meters
+    end_w = (10.0, 7.0) # (Pose_X, Pose_Z) in meters
 
     # Convert the start_w and end_W from webot's coordinate frame to map's
-    start = (int(12 * start_w[0]), int(360 - (12 * start_w[1]))) # (x, y) in 360x360 map
-    end = (int(12 * end_w[0]), int(360 - (12 * end_w[1]))) # (x, y) in 360x360 map
-
+    start = (360 - int(start_w[1]*30), int((start_w[0]*30))) # (x, y) in 360x360 map
+    end = (360 - int(end_w[1]*30), int((end_w[0])*30)) # (x, y) in 360x360 map
+    print ("start: " , start)
+    print ("end:", end)
 # Part 2.3: Implement A* or Dijkstra's
     def path_planner(map, start, end):
         '''
@@ -125,157 +126,127 @@ if mode == 'planner':
         :param end: A tuple of indices representing the end cell in the map
         :return: A list of tuples as a path from the given start to the given end in the given maze
         '''
-        
-        
-        # def reconstruct_path(cameFrom, current):
-            # path = []
-            
-            # for item in cameFrom.keys():
-                # current_node = cameFrom[item]
-                # path.append(current_node)
-                
-            # return path
+    
         def reconstruct_path(cameFrom, ending, start):
-            path = [start]
-            value = start
-            
-            while value != ending:
-                if value != cameFrom[value]:
-                    value = cameFrom[value]
-                    path.append(value)
-                else:
-                    del cameFrom[value]
-                    
+            # print ("calling function")
+            path = []
+            value = ending
+            while value != start:
+                # if value == cameFrom[value]:
+                # del cameFrom[value]
+                # else:
+                value = cameFrom[value]
+                path.append(value)
             return path
-            
+    
         def heuristic_cost(neighbor, end):
-            if(map[end[0]][end[1]] != 1):
-                return np.linalg.norm([neighbor, end])
-            else:
-                return float('inf')
-        
-        closed = []#nodes we've already looked at (explored)
-        open = []# frontier
+            return np.linalg.norm(np.array(neighbor)- np.array(end)) # SHIV : Changed this because this is the correct way to calculate the distance
+    
+        closed = []  # nodes we've already looked at (explored)
+        open = []  # frontier
         gscore = {}
-        for i in range(0,360):
-            for j in range(0,360):
-                gscore[(i,j)] = float('inf')
-        
-        cameFrom = {start: start}
-        
-        fscore = {}
-        
         for i in range(0, 360):
             for j in range(0, 360):
-                gscore[(i,j)] = float('inf')
-        
-        gscore[start] = 0
+                gscore[(i, j)] = float('inf')
+    
+        cameFrom = {start: None}
+    
+        hscore = {}
+        for i in range(0, 360):
+            for j in range(0, 360):
+                hscore[(i, j)] = float('inf')
+    
+        fscore = {}
+        for i in range(0, 360):
+            for j in range(0, 360):
+                fscore[(i, j)] = hscore[(i, j)] + gscore[(i, j)]
+    
+        gscore[start] = 0  # g
+        hscore[start] = heuristic_cost(start, end)
         fscore[start] = heuristic_cost(start, end)
-        
+    
         open.append(start)
-        start = (30,253)
-        current = start#?
+        # start = (30,253)
+        current = start
         count = 0
-        
-        while (len(open) != 0) and count < 2:
-            #current = min(fscore)#min(fscore, key=fscore.get)
+    
+        while len(open) != 0:
+            # current = min(fscore)#min(fscore, key=fscore.get)
             min = float('inf')
             for key in open:
                 if fscore[key] != float('inf') and fscore[key] < min:
                     current = key
                     min = fscore[key]
-                    
-                    
-            print ("new current node is: ", current)
+    
+            # print ("new current node is: ", current)
             if current == end:
-                print ("just in case")
-                return reconstruct_path(cameFrom, current)
-                
-            # print ("open is ",open)
-           
+                print("just in case")
+                print("path is: ", reconstruct_path(cameFrom, current, start))
+                return reconstruct_path(cameFrom, current, start)
+    
             open.remove(current)
-            
             closed.append(current)
-            # print ("some text")
-            # print ("closed is ", closed)
-            
+    
             neighbors = []
-            for i in range(current[0]-1, current[0]+2):
-                for j in range(current[1]-1, current[1]+2):
-                    if (i >= 0 and i < 360 and j >= 0 and j < 360 and (i,j) != current):
-                        neighbors.append((i,j))
-                        
-            print("neighbors we are looking at is: ", neighbors)
-            
+            for i in range(current[0] - 1, current[0] + 2):
+                for j in range(current[1] - 1, current[1] + 2):
+                    if (i >= 0 and i < 360 and j >= 0 and j < 360 and (i, j) != current):
+                        neighbors.append((i, j))
+    
+            # print("neighbors we are looking at is: ", neighbors)
+    
             for neighbor in neighbors:
-            #(29, 252), (29, 253), (29, 254), (30, 252), (30, 254), (31, 252), (31, 253), (31, 254)]
-                if neighbor in closed:
-                    # print ("statement 1")
+                # (29, 252), (29, 253), (29, 254), (30, 252), (30, 254), (31, 252), (31, 253), (31, 254)]
+                if neighbor in closed or map[neighbor[0]][neighbor[1]] == 1:
                     continue
-                    
+    
                 if neighbor not in open:
-                    # print ("appending neighbor to frontier")
                     open.append(neighbor)
-                   
-                print ("current neighbor is: ", neighbor)
-                tentative_gscore = gscore[current] + np.linalg.norm([neighbor, current])
-                # print ("tentative gscore: ", tentative_gscore)
-                # print ("current gscore:" ,gscore[current])
-                # print ("gscore if this neighbor: ", gscore[neighbor])
-                if (tentative_gscore >= gscore[neighbor]):#this is not a better path
-                    print ("entering here")
-                    # print ("if so, the tentative gscore is: ", tentative_gscore)
-                    # print ("gscore[neighbor] is: ", gscore[neighbor])
+    
+                # print ("current neighbor is: ", neighbor)
+    
+                # SHIV : Changed np.linalg.norm([neighbor, current]) TO np.linalg.norm(np.array(neighbor)- np.array(current))
+                tentative_gscore = gscore[current] + np.linalg.norm(np.array(neighbor)- np.array(current))
+                if tentative_gscore >= gscore[neighbor]:  # this is not a better path
+                    # print ("entering here")
                     continue
-                    
-                cameFrom[neighbor] = current
-                
-                # print ("updating cameFrom[neighbor] as", cameFrom[neighbor])
-                # print (cameFrom)
-                
-                # print ("1")
+    
+                # SHIV : I was wrong about this. Sorry. This shoulkd be outside else because otherwise we won't have these
+                # values for the new childen. It's only when the current g value is worse that we skip to update the value.
                 gscore[neighbor] = tentative_gscore
-                # print ("hello")
-                # if(heuristic_cost(neighbor, end) == float('inf')):
-                    # print ("aha")
-                    # fscore[neighbor] = float('inf')
-                # else:
-                # print ("not hitting wall yeah")
+                cameFrom[neighbor] = current
                 fscore[neighbor] = gscore[neighbor] + heuristic_cost(neighbor, end)
-                print ("finish with ", neighbor)
-            print ("open is ", open)
-            # del fscore[(30, 253)]
-            # print ("deleting (30, 253) in fscore")
-            # print ("fscore is", fscore)
-            count += 1
-        print ("end")
-        print ("came from is: ",cameFrom)
-        return reconstruct_path(cameFrom, current, start)
-        #return [(1000,1000)]
-        
-        
-
-
-# Part 2.1: Load map (map.npy) from disk and visualize it
-
-
-
-
-# Part 2.3 continuation: Call path_planner
-
+    
+                # print ("finish with ", neighbor)
+            # print ("open is ", open)
+        # print ("end")
+        # print ("came from is: ",cameFrom)
+        # print ("path is: ", reconstruct_path(cameFrom, current, start))
+    
+        return [] # SHIV : If it comes to this, this means no path was found because of obstacles
+    
+    
+    # Part 2.1: Load map (map.npy) from disk and visualize it
+    
+    
+    # Part 2.3 continuation: Call path_planner
+    
     path = path_planner(proper_map, start, end)
-    print ("path is", path)
-    plt.imshow(proper_map, cmap='gray')
-    for i in range(len(path) - 1):
-        plt.scatter(path[i], path[i+1], color='r')          
-     
-    plt.show() 
-
+    print("path is", path)
+    
+    
+    # SHIV : overlaying path on the 'proper_map' via just changing the cell value
+    for p in path: proper_map[p[0]][p[1]] = 2
+    fig = plt.figure(figsize=(12, 8), dpi=100, facecolor='w', edgecolor='k')
+    plt.imshow(proper_map)
+    plt.show()
+    
 
 # Part 2.4: Turn paths into goal points and save on disk as path.npy and visualize it
 
     for point in path:
-        point = (point[0], (360 - point[1]))
+        point = (point[1], point[0])
+        # print ("here the point is: ", point)
     
     
     np.save('/Applications/Robotics/Lab/CSCI3302_Lab5/controllers/path.npy', path)
@@ -290,19 +261,25 @@ if mode == 'manual':
 if mode == 'autonomous':
 # Part 3.1: Load path from disk and visualize it (Make sure its properly indented)
     path = np.load('/Applications/Robotics/Lab/CSCI3302_Lab5/controllers/path.npy')
+    print ("path is: ", path)
     map = np.load('/Applications/Robotics/Lab/CSCI3302_Lab5/controllers/map.npy')
     proper_map = np.load('/Applications/Robotics/Lab/CSCI3302_Lab5/controllers/proper_map.npy')
     
-    print(path)
-    plt.imshow(proper_map, cmap='gray')
-    for i in range(len(path) - 1):
-        plt.scatter(path[i], path[i+1], color='r')          
-     
-    plt.show()          
+    for point in path:
+        proper_map[point[0]][point[1]] = 2
+    # plt.imshow(proper_map, cmap = 'Reds')         
+    # plt.show()          
        
 
 state = 0 # use this to iterate through your path
 
+
+current_waypoint = path[len(path)-2]
+# print ("here the path: ", path)
+path = path[:-2]
+# print ("now the path is: ", path)
+
+        
 while robot.step(timestep) != -1 and mode != 'planner':
 
 ###################
@@ -360,6 +337,7 @@ while robot.step(timestep) != -1 and mode != 'planner':
 # Controller
 #
 ###################
+    
     if mode == 'manual':
         key = keyboard.getKey()
         while(keyboard.getKey() != -1): pass
@@ -393,17 +371,64 @@ while robot.step(timestep) != -1 and mode != 'planner':
         pass
 # Part 3.2: Feedback controller
         #STEP 1: Calculate the error
-
-
+        
+        # print ("current waypoint: ", current_waypoint)    
+        # current_waypoint =np.array( [current_waypoint[0]/360, current_waypoint[1]/360])
+        print ("posex, posey: ", pose_x, pose_y)
+        cur_x = (float(current_waypoint[1])/360.0)*30.0
+        cur_y = (float(current_waypoint[0])/360.0)*30.0
+        print ("way_point x, way_point y:", cur_x, cur_y)
+        # print ("new current waypoint: ", current_waypoint)
+        dist_err = math.sqrt(math.pow(pose_x - cur_x, 2) + math.pow(pose_y - cur_y, 2))
+        bearing_err = pose_theta + math.atan2(cur_y - pose_y, cur_x - pose_x)
+        
+        if(len(path) != 0 and dist_err < 0.2):
+        
+            current_waypoint = path[len(path)-1]
+            cur_x = (float(current_waypoint[1])/360.0)*30.0
+            cur_y = (float(current_waypoint[0])/360.0)*30.0 
+            # print ("current waypoint: ", cur_x, cur_y)
+            path = path[:-1]
+        # else:
+            # break
+        print ("distance is:", dist_err)
+        print ("bearing is:", bearing_err)
+        
+        
+        
+        
         #STEP 2: Controller
-
+        x_gain = 1.5
+        theta_gain = 3.1
+        x_prime = dist_err * x_gain
+        theta_prime = (theta_gain * bearing_err)
+        
+        
 
         #STEP 3: Compute wheelspeeds
-
+        if(bearing_err > 0.25):
+            vL = theta_prime + theta_gain
+            vR = -theta_prime - theta_gain
+        elif(bearing_err < -0.25):
+            vL = -theta_prime - theta_gain
+            vR = theta_prime + theta_gain
+        elif (len(path) == 0 and dist_err < 0.2):
+            vL = vR = 0
+        else:
+            vR = x_prime + x_gain
+            vL = x_prime + x_gain
+        
 
     # Normalize wheelspeed
     # Keep the max speed a bit less to minimize the jerk in motion
-
+        if (vR > MAX_SPEED/2):
+            vR = MAX_SPEED/2
+        elif(vR < -MAX_SPEED/2):
+            vR = -MAX_SPEED/2
+        if (vL > MAX_SPEED/2):
+            vL = MAX_SPEED/2
+        elif(vL < -MAX_SPEED/2):
+            vL = -MAX_SPEED/2
 
     # Odometry code. Don't change speeds after this
     # We are using GPS and compass for this lab to get a better pose but this is how you'll do the odometry
