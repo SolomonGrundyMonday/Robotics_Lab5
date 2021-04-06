@@ -63,18 +63,19 @@ keyboard.enable(timestep)
 display = robot.getDevice("display")
 
 # Odometry
-pose_x     = 2.58
-pose_y     = 8.9
+pose_x     = 4.47
+pose_y     = 8.056
 pose_theta = 0
 
 vL = 0
 vR = 0
 
+count = 0
 ##################### IMPORTANT #####################
 # Set the mode here. Please change to 'autonomous' before submission
 #mode = 'manual' # Part 1.1: manual mode
-mode = 'planner'
-# mode = 'autonomous'
+# mode = 'planner'
+mode = 'autonomous'
 
 lidar_sensor_readings = []
 lidar_offsets = np.linspace(-LIDAR_ANGLE_RANGE/2., +LIDAR_ANGLE_RANGE/2., LIDAR_ANGLE_BINS)
@@ -114,8 +115,11 @@ if mode == 'planner':
     end_w = (10.0, 7.0) # (Pose_X, Pose_Z) in meters
 
     # Convert the start_w and end_W from webot's coordinate frame to map's
-    start = (360 - int(start_w[1]*30), int((start_w[0]*30))) # (x, y) in 360x360 map
-    end = (360 - int(end_w[1]*30), int((end_w[0])*30)) # (x, y) in 360x360 map
+    # star_w = #matrix multiplication
+    # end_w = 
+    start = (int((start_w[0]*30)), int(start_w[1]*30)) # (x, y) in 360x360 map
+    end = (int((end_w[0])*30), int(end_w[1]*30))
+    
     print ("start: " , start)
     print ("end:", end)
 # Part 2.3: Implement A* or Dijkstra's
@@ -126,24 +130,20 @@ if mode == 'planner':
         :param end: A tuple of indices representing the end cell in the map
         :return: A list of tuples as a path from the given start to the given end in the given maze
         '''
-
+    
         def reconstruct_path(cameFrom, ending, start):
             # print ("calling function")
             path = []
             value = ending
             while value != start:
                 # if value == cameFrom[value]:
-
                 # del cameFrom[value]
                 # else:
                 value = cameFrom[value]
                 path.append(value)
-  
-
             return path
     
         def heuristic_cost(neighbor, end):
-
             return np.linalg.norm(np.array(neighbor)- np.array(end)) # SHIV : Changed this because this is the correct way to calculate the distance
     
         closed = []  # nodes we've already looked at (explored)
@@ -166,40 +166,32 @@ if mode == 'planner':
                 fscore[(i, j)] = hscore[(i, j)] + gscore[(i, j)]
     
         gscore[start] = 0  # g
-=======
-
         hscore[start] = heuristic_cost(start, end)
         fscore[start] = heuristic_cost(start, end)
     
         open.append(start)
-
         # start = (30,253)
         current = start
         count = 0
     
         while len(open) != 0:
             # current = min(fscore)#min(fscore, key=fscore.get)
-
-
             min = float('inf')
             for key in open:
                 if fscore[key] != float('inf') and fscore[key] < min:
                     current = key
                     min = fscore[key]
-
     
             # print ("new current node is: ", current)
             if current == end:
                 print("just in case")
-                print("path is: ", reconstruct_path(cameFrom, current, start))
+                #print("path is: ", reconstruct_path(cameFrom, current, start))
                 return reconstruct_path(cameFrom, current, start)
     
-
             open.remove(current)
             closed.append(current)
     
             neighbors = []
-
             for i in range(current[0] - 1, current[0] + 2):
                 for j in range(current[1] - 1, current[1] + 2):
                     if (i >= 0 and i < 360 and j >= 0 and j < 360 and (i, j) != current):
@@ -209,14 +201,11 @@ if mode == 'planner':
     
             for neighbor in neighbors:
                 # (29, 252), (29, 253), (29, 254), (30, 252), (30, 254), (31, 252), (31, 253), (31, 254)]
-
-
                 if neighbor in closed or map[neighbor[0]][neighbor[1]] == 1:
                     continue
     
                 if neighbor not in open:
                     open.append(neighbor)
-
     
                 # print ("current neighbor is: ", neighbor)
     
@@ -232,14 +221,11 @@ if mode == 'planner':
                 cameFrom[neighbor] = current
                 fscore[neighbor] = gscore[neighbor] + heuristic_cost(neighbor, end)
     
-
-
                 # print ("finish with ", neighbor)
             # print ("open is ", open)
         # print ("end")
         # print ("came from is: ",cameFrom)
         # print ("path is: ", reconstruct_path(cameFrom, current, start))
-
     
         return [] # SHIV : If it comes to this, this means no path was found because of obstacles
     
@@ -260,8 +246,6 @@ if mode == 'planner':
     plt.show()
     
 
-
-
 # Part 2.4: Turn paths into goal points and save on disk as path.npy and visualize it
 
     for point in path:
@@ -281,9 +265,7 @@ if mode == 'manual':
 if mode == 'autonomous':
 # Part 3.1: Load path from disk and visualize it (Make sure its properly indented)
     path = np.load('/Applications/Robotics/Lab/CSCI3302_Lab5/controllers/path.npy')
-
     print ("path is: ", path)
-
     map = np.load('/Applications/Robotics/Lab/CSCI3302_Lab5/controllers/map.npy')
     proper_map = np.load('/Applications/Robotics/Lab/CSCI3302_Lab5/controllers/proper_map.npy')
     
@@ -296,9 +278,9 @@ if mode == 'autonomous':
 state = 0 # use this to iterate through your path
 
 
-current_waypoint = path[len(path)-2]
+current_waypoint = path[len(path)-1]
 # print ("here the path: ", path)
-path = path[:-2]
+path = path[:-1]
 # print ("now the path is: ", path)
 
         
@@ -394,11 +376,15 @@ while robot.step(timestep) != -1 and mode != 'planner':
 # Part 3.2: Feedback controller
         #STEP 1: Calculate the error
         
-        # print ("current waypoint: ", current_waypoint)    
+        print ("current waypoint: ", current_waypoint)    
         # current_waypoint =np.array( [current_waypoint[0]/360, current_waypoint[1]/360])
         print ("posex, posey: ", pose_x, pose_y)
-        cur_x = (float(current_waypoint[1])/360.0)*30.0
-        cur_y = (float(current_waypoint[0])/360.0)*30.0
+        # print ("current waypoint is:", current_waypoint)
+        cur_x = ((float(current_waypoint[0])/30.0))
+        cur_y = (float(current_waypoint[1])/30.0)
+        # print ("cur_x is:", cur_x)
+        # print ("cur_y is:", cur_y)
+        
         print ("way_point x, way_point y:", cur_x, cur_y)
         # print ("new current waypoint: ", current_waypoint)
         dist_err = math.sqrt(math.pow(pose_x - cur_x, 2) + math.pow(pose_y - cur_y, 2))
@@ -407,21 +393,21 @@ while robot.step(timestep) != -1 and mode != 'planner':
         if(len(path) != 0 and dist_err < 0.2):
         
             current_waypoint = path[len(path)-1]
-            cur_x = (float(current_waypoint[1])/360.0)*30.0
-            cur_y = (float(current_waypoint[0])/360.0)*30.0 
+            cur_x = (float(current_waypoint[0])/30.0)
+            cur_y = (float(current_waypoint[1])/30.0) 
             # print ("current waypoint: ", cur_x, cur_y)
             path = path[:-1]
         # else:
             # break
         print ("distance is:", dist_err)
-        print ("bearing is:", bearing_err)
+        # print ("bearing is:", bearing_err)
         
         
         
         
         #STEP 2: Controller
         x_gain = 1.5
-        theta_gain = 3.1
+        theta_gain = 2.8#3.1
         x_prime = dist_err * x_gain
         theta_prime = (theta_gain * bearing_err)
         
@@ -454,9 +440,9 @@ while robot.step(timestep) != -1 and mode != 'planner':
 
     # Odometry code. Don't change speeds after this
     # We are using GPS and compass for this lab to get a better pose but this is how you'll do the odometry
-    pose_x += (vL+vR)/2/MAX_SPEED*MAX_SPEED_MS*timestep/1000.0*math.cos(pose_theta)
-    pose_y -= (vL+vR)/2/MAX_SPEED*MAX_SPEED_MS*timestep/1000.0*math.sin(pose_theta)
-    pose_theta += (vR-vL)/AXLE_LENGTH/MAX_SPEED*MAX_SPEED_MS*timestep/1000.0
+    # pose_x += (vL+vR)/2/MAX_SPEED*MAX_SPEED_MS*timestep/1000.0*math.cos(pose_theta)
+    # pose_y -= (vL+vR)/2/MAX_SPEED*MAX_SPEED_MS*timestep/1000.0*math.sin(pose_theta)
+    # pose_theta += (vR-vL)/AXLE_LENGTH/MAX_SPEED*MAX_SPEED_MS*timestep/1000.0
 
     # print("X: %f Z: %f Theta: %f" % (pose_x, pose_y, pose_theta)) #/3.1415*180))
 
