@@ -126,20 +126,24 @@ if mode == 'planner':
         :param end: A tuple of indices representing the end cell in the map
         :return: A list of tuples as a path from the given start to the given end in the given maze
         '''
-    
+
         def reconstruct_path(cameFrom, ending, start):
             # print ("calling function")
             path = []
             value = ending
             while value != start:
                 # if value == cameFrom[value]:
+
                 # del cameFrom[value]
                 # else:
                 value = cameFrom[value]
                 path.append(value)
+  
+
             return path
     
         def heuristic_cost(neighbor, end):
+
             return np.linalg.norm(np.array(neighbor)- np.array(end)) # SHIV : Changed this because this is the correct way to calculate the distance
     
         closed = []  # nodes we've already looked at (explored)
@@ -162,21 +166,27 @@ if mode == 'planner':
                 fscore[(i, j)] = hscore[(i, j)] + gscore[(i, j)]
     
         gscore[start] = 0  # g
+=======
+
         hscore[start] = heuristic_cost(start, end)
         fscore[start] = heuristic_cost(start, end)
     
         open.append(start)
+
         # start = (30,253)
         current = start
         count = 0
     
         while len(open) != 0:
             # current = min(fscore)#min(fscore, key=fscore.get)
+
+
             min = float('inf')
             for key in open:
                 if fscore[key] != float('inf') and fscore[key] < min:
                     current = key
                     min = fscore[key]
+
     
             # print ("new current node is: ", current)
             if current == end:
@@ -184,10 +194,12 @@ if mode == 'planner':
                 print("path is: ", reconstruct_path(cameFrom, current, start))
                 return reconstruct_path(cameFrom, current, start)
     
+
             open.remove(current)
             closed.append(current)
     
             neighbors = []
+
             for i in range(current[0] - 1, current[0] + 2):
                 for j in range(current[1] - 1, current[1] + 2):
                     if (i >= 0 and i < 360 and j >= 0 and j < 360 and (i, j) != current):
@@ -197,11 +209,14 @@ if mode == 'planner':
     
             for neighbor in neighbors:
                 # (29, 252), (29, 253), (29, 254), (30, 252), (30, 254), (31, 252), (31, 253), (31, 254)]
+
+
                 if neighbor in closed or map[neighbor[0]][neighbor[1]] == 1:
                     continue
     
                 if neighbor not in open:
                     open.append(neighbor)
+
     
                 # print ("current neighbor is: ", neighbor)
     
@@ -217,11 +232,14 @@ if mode == 'planner':
                 cameFrom[neighbor] = current
                 fscore[neighbor] = gscore[neighbor] + heuristic_cost(neighbor, end)
     
+
+
                 # print ("finish with ", neighbor)
             # print ("open is ", open)
         # print ("end")
         # print ("came from is: ",cameFrom)
         # print ("path is: ", reconstruct_path(cameFrom, current, start))
+
     
         return [] # SHIV : If it comes to this, this means no path was found because of obstacles
     
@@ -242,6 +260,8 @@ if mode == 'planner':
     plt.show()
     
 
+
+
 # Part 2.4: Turn paths into goal points and save on disk as path.npy and visualize it
 
     for point in path:
@@ -261,7 +281,9 @@ if mode == 'manual':
 if mode == 'autonomous':
 # Part 3.1: Load path from disk and visualize it (Make sure its properly indented)
     path = np.load('/Applications/Robotics/Lab/CSCI3302_Lab5/controllers/path.npy')
+
     print ("path is: ", path)
+
     map = np.load('/Applications/Robotics/Lab/CSCI3302_Lab5/controllers/map.npy')
     proper_map = np.load('/Applications/Robotics/Lab/CSCI3302_Lab5/controllers/proper_map.npy')
     
